@@ -1,0 +1,7 @@
+framework:
+  - terraform
+external-checks-dir:
+  - policies/checkov
+skip-check:
+  - CKV2_AWS_62   # event notifications not needed, no consumers yet
+  - CKV_AWS_144   # cross-region replication is out of scope for dev, revisit for prod

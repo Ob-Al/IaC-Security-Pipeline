@@ -1,0 +1,36 @@
+checks:
+  - code: ORG001
+    description: Resources must have an owner tag
+    impact: Untagged resources can't be traced to a team for cost or incident response
+    resolution: Add an owner tag or pass local.tags
+    requiredTypes:
+      - resource
+    requiredLabels:
+      - aws_s3_bucket
+      - aws_instance
+      - aws_db_instance
+      - aws_security_group
+      - aws_vpc
+    severity: MEDIUM
+    matchSpec:
+      name: tags
+      action: contains
+      value: owner
+    errorMessage: Resource is missing the owner tag
+    relatedLinks: []
+
+  - code: ORG002
+    description: RDS instances must not be publicly accessible
+    impact: Database reachable from the internet
+    resolution: Set publicly_accessible = false
+    requiredTypes:
+      - resource
+    requiredLabels:
+      - aws_db_instance
+    severity: CRITICAL
+    matchSpec:
+      name: publicly_accessible
+      action: notEqual
+      value: true
+    errorMessage: RDS instance is publicly accessible
+    relatedLinks: []

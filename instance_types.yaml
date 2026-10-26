@@ -1,0 +1,22 @@
+metadata:
+  id: "CKV2_ORG_2"
+  name: "EC2 instance types must come from the approved families"
+  category: "GENERAL_SECURITY"
+  severity: "HIGH"
+definition:
+  or:
+    - cond_type: attribute
+      resource_types: [aws_instance]
+      attribute: instance_type
+      operator: starting_with
+      value: "t3."
+    - cond_type: attribute
+      resource_types: [aws_instance]
+      attribute: instance_type
+      operator: starting_with
+      value: "t3a."
+    - cond_type: attribute
+      resource_types: [aws_instance]
+      attribute: instance_type
+      operator: starting_with
+      value: "m6i."

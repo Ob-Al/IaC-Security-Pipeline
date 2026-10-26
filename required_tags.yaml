@@ -1,0 +1,22 @@
+metadata:
+  id: "CKV2_ORG_1"
+  name: "Resources must have owner and environment tags"
+  category: "GENERAL_SECURITY"
+  severity: "MEDIUM"
+definition:
+  and:
+    - cond_type: attribute
+      resource_types: &taggable
+        - aws_s3_bucket
+        - aws_instance
+        - aws_db_instance
+        - aws_security_group
+        - aws_vpc
+        - aws_kms_key
+        - aws_iam_role
+      attribute: tags.owner
+      operator: exists
+    - cond_type: attribute
+      resource_types: *taggable
+      attribute: tags.environment
+      operator: exists

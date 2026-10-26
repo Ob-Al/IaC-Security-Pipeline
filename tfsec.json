@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "rule_id": "AVD-AWS-0107",
+      "long_id": "aws-ec2-no-public-ingress-sgr",
+      "rule_description": "An ingress security group rule allows traffic from /0.",
+      "description": "Security group rule allows ingress from public internet.",
+      "severity": "CRITICAL",
+      "resource": "aws_security_group.open",
+      "location": {"filename": "examples/insecure/main.tf", "start_line": 17, "end_line": 17}
+    },
+    {
+      "rule_id": "CUS001",
+      "long_id": "custom-custom-org001",
+      "description": "Resource is missing the owner tag",
+      "severity": "MEDIUM",
+      "resource": "aws_instance.big",
+      "location": {"filename": "examples/insecure/main.tf", "start_line": 29, "end_line": 35}
+    }
+  ]
+}

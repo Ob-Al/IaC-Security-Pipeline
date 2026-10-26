@@ -1,0 +1,118 @@
+name: iac-security
+
+on:
+  pull_request:
+    paths:
+      - "terraform/**"
+      - "policies/**"
+      - ".tfsec/**"
+      - ".checkov.yaml"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  security-events: write
+  pull-requests: write
+
+env:
+  CHECKOV_VERSION: "3.3.30"
+  TFSEC_VERSION: "v1.28.13"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scanners
+        run: |
+          pip install "checkov==${CHECKOV_VERSION}"
+          curl -sSL -o tfsec "https://github.com/aquasecurity/tfsec/releases/download/${TFSEC_VERSION}/tfsec-linux-amd64"
+          chmod +x tfsec && sudo mv tfsec /usr/local/bin/
+
+      - name: Unit tests
+        run: |
+          pip install pytest
+          pytest -q
+
+      - name: Scan
+        run: ./scripts/scan.sh terraform --no-gate
+
+      - name: Upload SARIF (checkov)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results/results_sarif.sarif
+          category: checkov
+
+      - name: Upload SARIF (tfsec)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results/tfsec.sarif
+          category: tfsec
+
+      - name: Job summary
+        if: always()
+        run: cat results/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: iac-scan
+          path: results/summary.md
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scan-results
+          path: results/
+
+      - name: Gate
+        run: |
+          python3 scripts/summarize.py --checkov results/results_json.json --tfsec results/tfsec.json \
+            --history /dev/null --summary /tmp/summary.md --fail-on HIGH
+
+  publish-dashboard:
+    needs: scan
+    if: github.ref == 'refs/heads/main' && always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: scan-results
+          path: new-results
+
+      - name: Append to history on gh-pages
+        run: |
+          git fetch origin gh-pages || true
+          if git show-ref --quiet refs/remotes/origin/gh-pages; then
+            git worktree add pages origin/gh-pages
+          else
+            git worktree add --detach pages
+            git -C pages rm -rf --quiet . || true
+          fi
+          tail -n 1 new-results/history.jsonl >> pages/history.jsonl
+          python3 dashboard/build.py --history pages/history.jsonl --out pages/index.html
+
+      - name: Push
+        working-directory: pages
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add history.jsonl index.html
+          git commit -m "scan ${GITHUB_SHA::7}" || exit 0
+          git push origin HEAD:gh-pages
